@@ -67,9 +67,9 @@ if (!class_exists('MP_SMS_Event'))
         {
             $this->error = new WP_Error();
             $this->available = ( MP_SMS_Helper::check_plugin('mage-eventpress','woocommerce-event-press.php') == '1' ) ? 'yes' : 'no';
-            $this->feature = get_option('mp_sms_event_settings')['use_feature'];
-            $this->sms_feature = get_option('mp_sms_general_settings')['use_sms_features'];
-            $this->sms_provider = get_option('mp_sms_general_settings')['sms_provider'];
+            $this->feature = MP_SMS_Helper::senitize(get_option('mp_sms_event_settings')['use_feature']);
+            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
+            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
             $this->enabled = ( $this->check_enabled() == '1' ) ? 'yes' : 'no';
         }
 
@@ -96,7 +96,7 @@ if (!class_exists('MP_SMS_Event'))
                     <form method="post" action="options.php">
                         <?php
                             wp_nonce_field('mp_sms_event_settings', 'mp_sms_event_settings_nonce');
-                            $use_feature = get_option('mp_sms_event_settings')['use_feature'];
+                            $use_feature = MP_SMS_Helper::senitize(get_option('mp_sms_event_settings')['use_feature']);
                             $feature_checked = $use_feature == 'on' ? 'checked' : '';
                         ?>
                         <table  class="form-table">

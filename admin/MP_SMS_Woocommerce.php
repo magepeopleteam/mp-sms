@@ -66,9 +66,9 @@ if (!class_exists('MP_SMS_Woocommerce'))
         {
             $this->error = new WP_Error();
             $this->available = ( MP_SMS_Helper::check_plugin('woocommerce','woocommerce.php') ) ? 'yes' : 'no';
-            $this->feature = get_option('mp_sms_woocommerce_settings')['use_feature'];
-            $this->sms_feature = get_option('mp_sms_general_settings')['use_sms_features'];
-            $this->sms_provider = get_option('mp_sms_general_settings')['sms_provider'];
+            $this->feature = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['use_feature']);
+            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
+            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
             $this->enabled = ( $this->check_enabled() == '1' ) ? 'yes' : 'no';
             
             if($this->available == 'no') 
@@ -164,21 +164,21 @@ if (!class_exists('MP_SMS_Woocommerce'))
             $sms = '';
             $order_status = $order->get_status();
             
-            if($order_status == 'on-hold' && get_option('mp_sms_woocommerce_settings')['sms_for_on_hold'] == 'on')
+            if($order_status == 'on-hold' && MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_on_hold']) == 'on')
             {
-                $sms = get_option('mp_sms_woocommerce_settings')['template_for_on_hold'];
+                $sms = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_on_hold']);
             }
-            else if($order_status == 'pending' && get_option('mp_sms_woocommerce_settings')['sms_for_pending'] == 'on')
+            else if($order_status == 'pending' && MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_pending']) == 'on')
             {
-                $sms = get_option('mp_sms_woocommerce_settings')['template_for_pending'];
+                $sms = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_pending']);
             }
-            else if($order_status == 'processing' && get_option('mp_sms_woocommerce_settings')['sms_for_processing'] == 'on')
+            else if($order_status == 'processing' && MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_processing']) == 'on')
             {
-                $sms = get_option('mp_sms_woocommerce_settings')['template_for_processing'];
+                $sms = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_processing']);
             }
-            else if($order_status == 'completed' && get_option('mp_sms_woocommerce_settings')['sms_for_completed'] == 'on')
+            else if($order_status == 'completed' && MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_completed']) == 'on')
             {
-                $sms = get_option('mp_sms_woocommerce_settings')['template_for_completed'];
+                $sms = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_completed']);
             }
 
             $sms = $this->prepare_sms_for_order($sms,$order,$item);
@@ -213,27 +213,27 @@ if (!class_exists('MP_SMS_Woocommerce'))
                     <form method="post" action="options.php">
                         <?php
                             wp_nonce_field('mp_sms_woocommerce_settings', 'mp_sms_woocommerce_settings_nonce');
-                            $use_feature = get_option('mp_sms_woocommerce_settings')['use_feature'];
+                            $use_feature = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['use_feature']);
                             $feature_checked = $use_feature == 'on' ? 'checked' : '';
-                            $sms_for_on_hold = get_option('mp_sms_woocommerce_settings')['sms_for_on_hold'];
+                            $sms_for_on_hold = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_on_hold']);
                             $on_hold_checked = $sms_for_on_hold == 'on' ? 'checked' : '';
-                            $sms_for_pending = get_option('mp_sms_woocommerce_settings')['sms_for_pending'];
+                            $sms_for_pending = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_pending']);
                             $pending_checked = $sms_for_pending == 'on' ? 'checked' : '';
-                            $sms_for_processing = get_option('mp_sms_woocommerce_settings')['sms_for_processing'];
+                            $sms_for_processing = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_processing']);
                             $processing_checked = $sms_for_processing == 'on' ? 'checked' : '';
-                            $sms_for_completed = get_option('mp_sms_woocommerce_settings')['sms_for_completed'];
+                            $sms_for_completed = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['sms_for_completed']);
                             $completed_checked = $sms_for_completed == 'on' ? 'checked' : '';
-                            $on_hold = get_option('mp_sms_woocommerce_settings')['template_for_on_hold'];
-                            $pending = get_option('mp_sms_woocommerce_settings')['template_for_pending'];
-                            $processing = get_option('mp_sms_woocommerce_settings')['template_for_processing'];
-                            $completed = get_option('mp_sms_woocommerce_settings')['template_for_completed'];
+                            $on_hold = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_on_hold']);
+                            $pending = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_pending']);
+                            $processing = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_processing']);
+                            $completed = MP_SMS_Helper::senitize(get_option('mp_sms_woocommerce_settings')['template_for_completed']);
                         ?>
                         <table  class="form-table">
                             <tbody>
                                 <tr>
                                     <td>Use Woocommerce SMS Feature ?</td>
                                     <td>
-                                        <?php MP_SMS_Layout::switch_button( 'mp_sms_woocommerce_settings[use_feature]', $feature_checked ); ?>
+                                        <?php MP_SMS_Layout::switch_button( 'mp_sms_woocommerce_settings[use_feature]',  esc_attr($feature_checked) ); ?>
                                     </td>
                                 </tr>
                                 <tr>

@@ -30,8 +30,8 @@ if (!class_exists('MP_SMS_General_Settings'))
         public function apply()
         {
             $this->error = new WP_Error();
-            $this->sms_feature = get_option('mp_sms_general_settings')['use_sms_features'];
-            $this->sms_provider = get_option('mp_sms_general_settings')['sms_provider'];
+            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
+            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
 
             $admin_url = get_admin_url();
 
@@ -57,16 +57,16 @@ if (!class_exists('MP_SMS_General_Settings'))
                     <form method="post" action="options.php">
                         <?php
                             wp_nonce_field('mp_sms_general_settings', 'mp_sms_general_settings_nonce');
-                            $use_sms_features = get_option('mp_sms_general_settings')['use_sms_features'];
+                            $use_sms_features = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
                             $feature_checked = $use_sms_features == 'on' ? 'checked' : '';
-                            $sms_provider = get_option('mp_sms_general_settings')['sms_provider'];
+                            $sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
                         ?>
                         <table  class="form-table">
                             <tbody>
                                 <tr>
                                     <td>Use SMS Feature ?</td>
                                     <td>
-                                        <?php MP_SMS_Layout::switch_button( 'mp_sms_general_settings[use_sms_features]', $feature_checked ); ?>
+                                        <?php MP_SMS_Layout::switch_button( 'mp_sms_general_settings[use_sms_features]',  $feature_checked ); ?>
                                     </td>
                                 </tr>
                                 <tr>

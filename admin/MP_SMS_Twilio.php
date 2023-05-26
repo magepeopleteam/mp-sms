@@ -58,9 +58,9 @@ if (!class_exists('MP_SMS_TWILIO'))
                         <form method="post" action="options.php">
                             <?php
                                 wp_nonce_field('mp_sms_twilio_settings', 'mp_sms_twilio_settings_nonce');
-                                $account_id = get_option('mp_sms_twilio_settings')['account_id'];
-                                $auth_token = get_option('mp_sms_twilio_settings')['auth_token'];
-                                $twilio_number = get_option('mp_sms_twilio_settings')['twilio_number'];
+                                $account_id = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['account_id']);
+                                $auth_token = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['auth_token']);
+                                $twilio_number = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['twilio_number']);
                             ?>
                             <table  class="form-table">
                                 <tbody>
@@ -136,8 +136,8 @@ if (!class_exists('MP_SMS_TWILIO'))
         {
             $this->error = new WP_Error();
             $this->available = ( $this->available() == '1' ) ? 'yes' : 'no';
-            $this->sms_feature = get_option('mp_sms_general_settings')['use_sms_features'];
-            $this->sms_provider = get_option('mp_sms_general_settings')['sms_provider'];
+            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
+            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
             $this->enabled = ( $this->check_enabled() == '1' ) ? 'yes' : 'no';
 
             if($this->available == 'no') 
@@ -147,11 +147,11 @@ if (!class_exists('MP_SMS_TWILIO'))
 
             if($this->enabled == 'yes')
             {                
-                $this->account_id = get_option('mp_sms_twilio_settings')['account_id'];
+                $this->account_id = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['account_id']);
 
-                $this->auth_token = get_option('mp_sms_twilio_settings')['auth_token'];
+                $this->auth_token = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['auth_token']);
 
-                $this->twilio_number = get_option('mp_sms_twilio_settings')['twilio_number'];
+                $this->twilio_number = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['twilio_number']);
 
                 $admin_url = get_admin_url();
 

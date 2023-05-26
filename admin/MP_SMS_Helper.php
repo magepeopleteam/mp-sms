@@ -10,6 +10,11 @@
 		class MP_SMS_Helper 
 		{
 
+			public static function senitize($string)
+			{
+				return esc_html(esc_attr($string));
+			}
+
 			public static function check_plugin($plugin_dir_name,$plugin_file): int 
 			{
 				include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
