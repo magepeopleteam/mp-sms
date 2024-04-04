@@ -1,53 +1,60 @@
 <?php
+
 if (!defined('ABSPATH'))
 {
     die;
 } // Cannot access pages directly.
 
-/**
- * Class for working on Woocommerce SMS Service
- *
- * @since 1.0
- *  
- * */
 if (!class_exists('MP_SMS_Event'))
 {
     class MP_SMS_Event 
     {
-        private $available;
-        private $enabled;
-        private $feature;
-        private $sms_feature;
-        private $sms_provider;
         private $error;
 
         public function __construct()
         {
-            add_action('mp_sms_tab', array($this, 'tab_item'));
-            add_action('mp_sms_tab_content', array($this, 'tab_content'));
-            add_action('admin_init', [ $this, 'save_mp_sms_event_settings' ]);            
-            add_action('wp_loaded', array( $this,'apply' ) );
-            add_action('admin_notices',array($this, 'mp_admin_notice' ) );
-            add_action('init', array($this,'shortcodes') );
+            $this->error = new WP_Error();
+            if(MP_SMS_Function::check_plugin('mage-eventpress','woocommerce-event-press.php') == '1')
+            {
+                add_action('mp_sms_tab', array($this, 'tab_item'));
+                add_action('mp_sms_tab_content', array($this, 'tab_content'));
+                add_action('admin_init', array($this, 'save_mp_sms_event_settings'));           
+                add_action('admin_notices',array($this, 'mp_admin_notice' ) );
+                add_action('mp_sms_event_settings', array($this,'mp_sms_event_settings'));
+                add_action('mp_sms_trigger', array($this,'send_sms'),10,2);
+                add_shortcode('mp_sms_event_name' , array($this,'event_name') );
+                add_shortcode('mp_sms_event_date' , array($this,'event_date') );
+                add_filter('mp_sms_get_event_shortcodes', array($this,'get_shortcodes'));
+                add_filter('mp_sms_event_sms', array($this,'get_sms'),10,2);
+                add_filter('mp_sms_event_shortcodes', array($this,'shortcode_list') );
+            }
         }
 
         public function tab_item()
         {
-            if($this->available == "yes")
-            {
             ?>
-                <li class="tab-item" data-tabs-target="#mp_sms_event_settings">SMS Event Settings</li>
+                <li class="tab-item" data-tabs-target="#mp_sms_event_settings"><?php esc_html_e('Event SMS Settings','mp-sms');?></li>
             <?php
-            }
         }
 
-        public function shortcodes()
+        public static function post_link_key()
         {
-            if($this->enabled == 'yes')
-            {
-                add_shortcode( 'mp_sms_event_name' , array($this,'event_name') );
-                add_shortcode( 'mp_sms_event_date' , array($this,'event_date') );
-            }            
+            return 'link_mep_event';
+        }
+
+        public function shortcode_list($shortcodes)
+        {
+            $array = array(
+                'mp_sms_event_short_codes' => array(
+                    'wp_post_link_key' => self::post_link_key(),
+                    'shortcodes' => array(
+                        'event_name' =>'mp_sms_event_name',
+                        'event_date' =>'mp_sms_event_date',
+                    )
+                )
+            );
+
+            return array_merge($shortcodes,$array);
         }
 
         public function event_name( $atts )
@@ -58,74 +65,177 @@ if (!class_exists('MP_SMS_Event'))
 
         public function event_date( $atts )
         {
-            $date = wc_get_order_item_meta( $atts['item_id'], '_ttbm_date', true );
-            $date = TTBM_Function::datetime_format($date, $type = 'date-time-text'); 
+            $date = wc_get_order_item_meta( $atts['item_id'], 'Date', true );
+            //$date = TTBM_Function::datetime_format($date, $type = 'date-time-text'); 
             return $date;
         }
 
-        public function apply()
+        public function mp_sms_event_settings()
         {
-            $this->error = new WP_Error();
-            $this->available = ( MP_SMS_Helper::check_plugin('mage-eventpress','woocommerce-event-press.php') == '1' ) ? 'yes' : 'no';
-            $this->feature = MP_SMS_Helper::senitize(get_option('mp_sms_event_settings')['use_feature']);
-            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
-            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
-            $this->enabled = ( $this->check_enabled() == '1' ) ? 'yes' : 'no';
-        }
+            $sms_event_settings = MP_SMS_Function::get_option('mp_sms_event_settings','');
+            $shortcodes = array_merge(apply_filters('mp_sms_wc_shortcodes',array()),apply_filters('mp_sms_event_shortcodes',array()));
+            $shortcode_string = MP_SMS_Function::format_shortcodes_as_string($shortcodes);
+            $sms_woocommerce_settings = MP_SMS_Function::get_array_from_array('woocommerce_settings',$sms_event_settings);
+            ?>
 
-        public function check_enabled()
-        {
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <label for="mp_sms_event_settings[use_feature]"><strong><?php esc_html_e('Use Event Plugin SMS ?','mp-sms');?></strong></label>
+                            <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[use_feature]' ,'accordion-toggle' , 'mp_sms_event_settings[use_feature]',  MP_SMS_Function::array_key_checked($sms_event_settings,'use_feature'),''  ); ?>                                        
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion">
+                                <div class="accordion-item">
+                                    <div class="accordion-header">
+                                        <label for="mp_sms_event_settings[woocommerce_settings][use_feature]"><strong><?php esc_html_e('Use Event Plugin SMS for Woocommerce Status ?','mp-sms');?></strong></label>
+                                        <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[woocommerce_settings][use_feature]' ,'accordion-toggle' , 'mp_sms_event_settings[woocommerce_settings][use_feature]',  MP_SMS_Function::array_key_checked($sms_woocommerce_settings,'use_feature'),''  ); ?>
+                                    </div>
+                                    <div class="accordion-content">
+                                        <div class="accordion">
+                                            <div class="accordion-item">
+                                                <div class="accordion-header">
+                                                    <label for="mp_sms_event_settings[woocommerce_settings][feature_on_hold]"><strong><?php esc_html_e('Enable SMS template for Event order status ( On-hold ) ?','mp-sms');?></strong></label>
+                                                    <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[woocommerce_settings][feature_on_hold]' ,'accordion-toggle' , 'mp_sms_event_settings[woocommerce_settings][feature_on_hold]',  MP_SMS_Function::array_key_checked($sms_woocommerce_settings,'feature_on_hold'),''  ); ?>
+                                                </div>
+                                                <div class="accordion-content">
+                                                    <div id="mp_sms_event_settings[woocommerce_settings][template_for_on_hold]" class="sms-template">
+                                                        <?php MP_SMS_Layout::sms_shortcode_info($shortcode_string,'Dear {billing_name}, your order #{order_id} is now On-hold'); ?>
+                                                        <textarea class="" name="mp_sms_event_settings[woocommerce_settings][template_for_on_hold]" placeholder="<?php esc_html_e('Enter SMS template for Event order status ( On-hold ) here...','mp-sms');?>"><?php echo esc_attr( $sms_event_settings['woocommerce_settings']['template_for_on_hold']??'' ); ?></textarea>
+                                                    </div>  
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="accordion">
+                                            <div class="accordion-item">
+                                                <div class="accordion-header">
+                                                    <label for="mp_sms_event_settings[woocommerce_settings][feature_on_pending]"><strong><?php esc_html_e('Enable SMS template for Event order status ( Pending ) ?','mp-sms');?></strong></label>
+                                                    <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[woocommerce_settings][feature_on_pending]' ,'accordion-toggle' , 'mp_sms_event_settings[woocommerce_settings][feature_on_pending]',  MP_SMS_Function::array_key_checked($sms_woocommerce_settings,'feature_on_pending'),''  ); ?>
+                                                </div>
+                                                <div class="accordion-content">
+                                                    <div id="mp_sms_event_settings[woocommerce_settings][template_for_on_hold]" class="sms-template">
+                                                        <?php MP_SMS_Layout::sms_shortcode_info($shortcode_string,'Dear {billing_name}, your order #{order_id} is now Pending'); ?>
+                                                        <textarea class="" name="mp_sms_event_settings[woocommerce_settings][template_for_pending]" placeholder="<?php esc_html_e('Enter SMS template for Event order status ( Pending ) here...','mp-sms');?>"><?php echo esc_attr( $sms_event_settings['woocommerce_settings']['template_for_pending']??'' ); ?></textarea>
+                                                    </div>  
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="accordion">
+                                            <div class="accordion-item">
+                                                <div class="accordion-header">
+                                                    <label for="mp_sms_event_settings[woocommerce_settings][feature_on_processing]"><strong><?php esc_html_e('Enable SMS template for Event order status ( Processing ) ?','mp-sms');?></strong></label>
+                                                    <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[woocommerce_settings][feature_on_processing]' ,'accordion-toggle' , 'mp_sms_event_settings[woocommerce_settings][feature_on_processing]',  MP_SMS_Function::array_key_checked($sms_woocommerce_settings,'feature_on_processing'),''  ); ?>
+                                                </div>
+                                                <div class="accordion-content">
+                                                    <div id="mp_sms_event_settings[woocommerce_settings][template_for_on_hold]" class="sms-template">
+                                                        <?php MP_SMS_Layout::sms_shortcode_info($shortcode_string,'Dear {billing_name}, your order #{order_id} is now Processing'); ?>
+                                                        <textarea class="" name="mp_sms_event_settings[woocommerce_settings][template_for_processing]" placeholder="<?php esc_html_e('Enter SMS template for Event order status ( Processing ) here...','mp-sms');?>"><?php echo esc_attr( $sms_event_settings['woocommerce_settings']['template_for_processing']??'' ); ?></textarea>
+                                                    </div>  
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="accordion">
+                                            <div class="accordion-item">
+                                                <div class="accordion-header">
+                                                    <label for="mp_sms_event_settings[woocommerce_settings][feature_on_completed]"><strong><?php esc_html_e('Enable SMS template for Event order status ( Completed ) ?','mp-sms');?></strong></label>
+                                                    <?php MP_SMS_Layout::switch_button('mp_sms_event_settings[woocommerce_settings][feature_on_completed]' ,'accordion-toggle' , 'mp_sms_event_settings[woocommerce_settings][feature_on_completed]',  MP_SMS_Function::array_key_checked($sms_woocommerce_settings,'feature_on_completed'),''  ); ?>
+                                                </div>
+                                                <div class="accordion-content">
+                                                    <div id="mp_sms_event_settings[woocommerce_settings][template_for_on_hold]" class="sms-template">
+                                                        <?php MP_SMS_Layout::sms_shortcode_info($shortcode_string,'Dear {billing_name}, your order #{order_id} is now Completed'); ?>
+                                                        <textarea class="" name="mp_sms_event_settings[woocommerce_settings][template_for_completed]" placeholder="<?php esc_html_e('Enter SMS template for Event order status ( Completed ) here...','mp-sms');?>"><?php echo esc_attr( $sms_event_settings['woocommerce_settings']['template_for_completed']??'' ); ?></textarea>
+                                                    </div>  
+                                                </div>
+                                            </div>
+                                        </div>  
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            if($this->available == 'yes' && $this->feature == "on" && $this->sms_feature == "on" && $this->sms_provider != '')
-            {
-                return 1;
-            }
-            else
-            {
-                return 0;
-            }
-
+            <?php
         }
 
         public function tab_content()
         {
-            if($this->available == "yes")
-            {
             ?>
                 <div class="tab-content" id="mp_sms_event_settings">
-                    <form method="post" action="options.php">
-                        <?php
-                            wp_nonce_field('mp_sms_event_settings', 'mp_sms_event_settings_nonce');
-                            $use_feature = MP_SMS_Helper::senitize(get_option('mp_sms_event_settings')['use_feature']);
-                            $feature_checked = $use_feature == 'on' ? 'checked' : '';
-                        ?>
-                        <table  class="form-table">
-                            <tbody>
-                                <tr>
-                                    <td>Use SMS Event Feature ?</td>
-                                    <td>
-                                        <?php MP_SMS_Layout::switch_button( 'mp_sms_event_settings[use_feature]', $feature_checked ); ?>
-                                    </td>
-                                </tr>
-                                
-                                <tr>
-                                    <td colspan="2">
-                                        <div style="float:right;padding-left: 10px">
-                                            <input type="hidden" name="action" value="mp_sms_event_settings_save">
-                                            <input type="submit" name="submit" class="button-primary" value="Save Settings">
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </form>
+                    <div class="mp-sms-tour-settings">
+                        <h3><?php esc_html_e('Event Plugin SMS Settings','mp-sms');?></h3>
+                        <form method="post" action="options.php">
+                            <?php do_action('mp_sms_event_settings'); ?>
+                            <div class="action-button">
+                                <?php echo wp_nonce_field('mp_sms_event_settings', 'mp_sms_event_settings_nonce'); ?>
+                                <input type="hidden" name="action" value="mp_sms_event_settings_save">
+                                <input type="submit" name="submit" class="button" value="Save Settings">
+                            </div>
+                        </form>
+                    </div>                    
                 </div>
-
-                <script>
-
-				</script>
             <?php
+        }
+
+        public function get_shortcodes()
+        {
+            return array_merge(apply_filters('mp_sms_event_shortcodes',array()),apply_filters('mp_sms_wc_shortcodes',array()));
+        }
+
+        public function get_sms($sms,$order_status)
+        {     
+            $mp_sms_event_settings = MP_SMS_Function::get_option('mp_sms_event_settings','');
+
+            if($mp_sms_event_settings['use_feature'] == 'on' && $mp_sms_event_settings['woocommerce_settings']['use_feature'] == 'on')
+            {
+                if($order_status == 'on-hold')
+                {
+                    $sms = $mp_sms_event_settings['woocommerce_settings']['template_for_on_hold'];
+                }
+                else if($order_status == 'pending')
+                {
+                    $sms = $mp_sms_event_settings['woocommerce_settings']['template_for_pending'];
+                }
+                else if($order_status == 'processing')
+                {
+                    $sms = $mp_sms_event_settings['woocommerce_settings']['template_for_processing'];
+                }
+                else if($order_status == 'completed')
+                {
+                    $sms = $mp_sms_event_settings['woocommerce_settings']['template_for_completed'];
+                }
             }
+
+            return $sms;
+        }
+
+        public function send_sms($order,$item)
+        {    
+            $number = MP_SMS_Function::format_mobile_number($order->get_billing_country(),$order->get_billing_phone());
+            $sms_array = array_filter($this->get_sms_text($order,$item));
+            if(count($sms_array) && $number)
+            {
+                foreach($sms_array as $sms)
+                {
+                    do_action('mp_send_sms',array('numbers'=>$number,'sms'=>$sms));
+                }
+            }
+        }
+
+        public function get_sms_text($order,$item)
+        {
+            $sms_array = array();
+            $shortcodes ='';
+            $order_status = $order->get_status();
+
+            if(MP_SMS_Function::get_item_post_type($item,MP_SMS_Event::post_link_key()) == 'mep_events')
+            {
+                $sms = apply_filters('mp_sms_event_sms','',$order_status);
+                $shortcodes = apply_filters('mp_sms_get_event_shortcodes',array());
+                $sms_array[] = MP_SMS_Function::prepare_sms_for_order($order->get_id(),$item->get_id(),$shortcodes,$sms);                    
+            }
+
+            return $sms_array;
         }
 
         public function save_mp_sms_event_settings()
@@ -133,14 +243,64 @@ if (!class_exists('MP_SMS_Event'))
             if (isset($_POST['action']) && $_POST['action'] === 'mp_sms_event_settings_save' && wp_verify_nonce($_POST['mp_sms_event_settings_nonce'], 'mp_sms_event_settings')) 
             {
                 $sanitized_options = array();
+                
                 if (isset($_POST['mp_sms_event_settings']['use_feature'])) 
                 {
                     $sanitized_options['use_feature'] = sanitize_text_field($_POST['mp_sms_event_settings']['use_feature']);
                 }
+                else
+                {
+                    $sanitized_options['use_feature'] = '';
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['use_feature'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['use_feature'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['use_feature']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_hold'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['feature_on_hold'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_hold']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_on_hold'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['template_for_on_hold'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_on_hold']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_pending'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['feature_on_pending'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_pending']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_pending'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['template_for_pending'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_pending']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_processing']))
+                {
+                    $sanitized_options['woocommerce_settings']['feature_on_processing'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_processing']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_processing'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['template_for_processing'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_processing']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_completed'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['feature_on_completed'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['feature_on_completed']);
+                }
+
+                if (isset($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_completed'])) 
+                {
+                    $sanitized_options['woocommerce_settings']['template_for_completed'] = sanitize_text_field($_POST['mp_sms_event_settings']['woocommerce_settings']['template_for_completed']);
+                }
 
                 update_option('mp_sms_event_settings', $sanitized_options);
 
-                wp_safe_redirect(admin_url('admin.php?page=mp-sms#mp_sms_event_settings'));
+                wp_safe_redirect(admin_url('admin.php?page=mp-sms-settings#mp_sms_event_settings'));
                 exit();
 
             }
@@ -149,7 +309,7 @@ if (!class_exists('MP_SMS_Event'))
 
         public function mp_admin_notice()
         {				
-            MP_SMS_Helper::mp_error_notice($this->error);
+            MP_SMS_Function::mp_error_notice($this->error);
         }
         
     }

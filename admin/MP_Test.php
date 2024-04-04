@@ -21,22 +21,21 @@ if (!class_exists('MP_Test'))
 
         public function test()
         {
-            $order = wc_get_order(229);
-            $order_items = $order->get_items();
-            foreach ($order_items as $order_item)
-            {
-                //echo "<pre>"; print_r($order_item);exit;
-            }
-            //$item = new WC_Order_Item_Product('58');
-            // $product_id = $item->get_product_id();
-            // $product = wc_get_product( $product_id );
-            
-            //$date = MP_SMS_Helper::check_plugin('woocommerce','woocommerce.php');
-            
-            //echo "<pre>"; print_r($date);exit;
-            $test = MP_SMS_Helper::format_mobile_number('BD','01770000099');
-            //echo "<pre>";print_r($test);exit;
-        }
+            // $order_id = 854;
+            // $upload_dir                     = wp_upload_dir();
+            // $pdf_url                    = $upload_dir['basedir'] . '/' . esc_html__( 'Ticket', 'ttbm-pro' ) . $order_id . '.pdf';
+            // do_action('ttbm_generate_pdf',$order_id,$pdf_url,'mail');
+            // echo "<pre>"; print_r($pdf_url);echo "</pre>";exit;        
+            // $array = MP_SMS_Function::get_option('mp_sms_woocommerce_settings[template_for_on_hold]','');
+            // echo "<pre>";print_r($array);exit;
+            // $shortcodes = array_merge(apply_filters('mp_sms_tour_shortcodes',array()),apply_filters('mp_sms_wc_shortcodes',array()));
+            // echo "<pre>";print_r($shortcodes);echo "<pre>";exit;
+            // echo "<pre>"; print_r($date);exit;
+            // do_action('mp_sms',array('order_id'=>644));
+            // $test = MP_SMS_Function::format_mobile_number('BD','01770000099');
+            // echo "<pre>";print_r($test);exit;
+        }      
+
         
     }
 

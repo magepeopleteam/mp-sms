@@ -1,63 +1,201 @@
 @charset "utf-8";
 
-/******************************************************************** Shadow content ************************************************/
+/******************************************************************** sms tab ************************************************/
 @media only screen and (min-width: 10px) 
-{
-	.tab-container 
+{	
+	/******************************************************************** Sms Tab List ************************************************/
+
+	.mpStyles .mp-sms .tab-container 
 	{
 		display: flex;
 		padding: 20px;
 	}
 
-	.tab-menu 
+	.mpStyles .mp-sms .tab-menu 
 	{
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		background-color: #f8f8f8;
-		border-radius: 6px;
+		background-color: #d5d9dc;
+		border-right: 3px solid #02223b;
 	}
 
-	.tab-item 
+	.mpStyles .mp-sms .tab-menu h3
+	{
+		font-weight: bold;
+		text-align: center;
+		padding: 10px;
+	}
+
+	.mpStyles .mp-sms .tab-item 
 	{
 		font-size: 16px;
 		padding: 10px 20px;
 		cursor: pointer;
-		color: #666;
+		color: #666666;
 		transition: color 0.3s ease-in-out;
 	}
 
-	.tab-item:hover 
+	.mpStyles .mp-sms .tab-item:hover 
 	{
 		color: #333;
 	}
 
-	.tab-item.active 
+	.mpStyles .mp-sms .tab-item.active 
 	{
 		color: #fff;
 		background-color: #333;
 	}
 
-	.tab-content-container 
+	.mpStyles .mp-sms .tab-content-container 
 	{
 		flex-grow: 1;
 	}
 
-	.tab-content 
+	.mpStyles .mp-sms .tab-content 
 	{
 		display: none;
 		padding: 20px;
 		background-color: #f8f8f8;
-		border-radius: 6px;
 	}
 
-	.tab-content.active 
+	.mpStyles .mp-sms .tab-content.active 
 	{
 		display: block;
+		background-color: #d5d9dc;
 	}
 
-	.text-switch-button 
+	.mpStyles .mp-sms .text-switch-button 
 	{
 		display: inline;		
 	}
+
+	.mpStyles .mp-sms .hl 
+	{
+		display: flex;
+		height: 3px;
+		background-color: #02223b;
+		margin: 10px 0;
+	}
+
+	.mpStyles .mp-sms .tab-container .action-button 
+	{
+        display: flex;
+		justify-content: right;
+        align-items: right;
+		
+    }
+
+    .mpStyles .mp-sms .tab-container .action-button .button 
+	{
+        display: flex;
+        align-items: center;
+		min-height: 26px;
+        cursor: pointer; 
+		background-color: #0073cc;
+		color: white;
+		margin: 10px;
+		border-radius: 5px;
+    }
+
+    .mpStyles .mp-sms .tab-container .action-button .dashicons 
+	{
+        margin-right: 5px;
+    }
+
+	.mpStyles .mp-sms .tab-container .form-container 
+	{
+        margin-right: 5px;
+    }
+
+	.mpStyles .mp-sms .wc-sms-status
+	{
+		display: flex;
+        align-items: center;
+		padding: 10px;
+	}
+
+	.mpStyles .mp-sms .sms-template 
+	{
+		display: flex;
+		flex-direction: row;
+		padding: 10px;
+	}
+	  
+	.mpStyles .mp-sms .sms-template > * 
+	{
+		flex: 1;
+		min-width: 0;
+		padding: 10px;
+	}
+	  
+	.mpStyles .mp-sms .sms-template > :only-child 
+	{
+		justify-content: center;
+	}
+	  
+	.mpStyles .mp-sms .sms-template > :first-child,
+	.mpStyles .mp-sms .sms-template > :last-child 
+	{
+		justify-content: flex-start;
+	}
+	  
+	.mpStyles .mp-sms .sms-template > :first-child + * 
+	{
+		justify-content: flex-end;
+	}
+
+	.mpStyles .mp-sms .input-text 
+	{
+		width: 100%;
+	}
+	
+	.mpStyles .mp-sms .mp-sms-container
+	{
+		display: -webkit-flex;
+		display: flex;
+		flex-direction: column;
+		-webkit-justify-content: center;
+		justify-content: center;
+		align-items: center;
+		height: 100vh;
+		padding: 20px;
+	}
+
+	.mpStyles .mp-sms .mp-sms-container .install
+	{
+		display: -webkit-flex;
+		display: flex;
+		flex-direction: column;
+		-webkit-justify-content: flex-start;
+		justify-content: flex-start;
+		align-items: center;
+		border: 3px solid #ccc;
+		box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+		padding: 20px;
+		margin-bottom: auto;
+	}
+
+	.mpStyles .mp-sms .mp-sms-container .install h3 
+	{
+		color: #333;
+	}
+	
+	.mpStyles .mp-sms .mp-sms-container .install a.mp-sms-install-activate 
+	{
+		display: inline-block;
+		padding: 10px 20px;
+		margin-top: 20px;
+		background-color: #0c40dc;
+		color: #fff;
+		text-decoration: none;
+		border-radius: 5px;
+		transition: background-color 0.3s ease;
+	}
+	
+	.mpStyles .mp-sms .mp-sms-container .install a.mp-sms-install-activate:hover 
+	{
+		background-color: #08308a;
+	}
+
 }

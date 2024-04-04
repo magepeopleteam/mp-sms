@@ -22,39 +22,27 @@
 			public function sms_menu() 
 			{
 				add_menu_page(
-					__('MP SMS', 'mp-sms'),
-					__('MP SMS', 'mp-sms'),
+					__('WPSmsly', 'mp-sms'),
+					__('WPSmsly', 'mp-sms'),
 					'manage_options',
 					'mp-sms',
 					array($this, 'main_sms'),
 					'',
 					9
 				);
+
 			}
 
 			public function main_sms()
 			{
 				?>
-					<div class="mpStyles">
-
-						<div class="tab-container">
-							<ul class="tab-menu">
-								<?php do_action('mp_sms_tab'); ?>
-							</ul>
-
-							<div class="tab-content-container">
-								<?php do_action('mp_sms_tab_content'); ?>
-							</div>
-						</div>
-
-					</div>
-
+					
 				<?php
 			}
 
 			public function mp_admin_notice()
 			{				
-				MP_SMS_Helper::mp_error_notice($this->error);
+				MP_SMS_Function::mp_error_notice($this->error);
 			}
 
 		}

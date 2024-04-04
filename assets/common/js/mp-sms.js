@@ -44,3 +44,53 @@ if(currentHash.length > 0)
 	}
 	});
 }
+
+function mp_sms_loader(target) {
+	target.addClass('loader loader-spinner');
+}
+
+function mp_sms_loader_remove(target) {
+	target.each(function () {
+		target.removeClass('loader loader-spinner');
+	})
+}
+
+(function ($) {
+	"use strict";
+
+	$(document).ready(function () {
+
+		$(document).on('click', '.mp-sms-install-activate', function (e) {
+			e.preventDefault();
+
+			let install_action = $(this).data('install-action');
+			let target = $(this).closest('.install');
+
+			if (install_action) {
+				$.ajax({
+					type: 'POST',
+					url: mp_sms_ajax_url,
+					data: {
+						"action": 'mp_sms_install_and_activate_woocommerce',
+						"install_action":install_action
+					},
+					beforeSend: function () {
+						$('.loader-container').show();
+					},
+					success: function (data) {
+						let jsonStartIndex = data.indexOf('{"status":');
+						let jsonString = data.substring(jsonStartIndex);
+						let parsed_data = JSON.parse(jsonString);
+						$('.loader-container').hide();
+						target.html(parsed_data.message);
+						if (parsed_data.status == 'success') {
+							window.location.replace(mp_sms_site_url);
+						}
+					},
+				});
+			}
+		});
+
+	});
+
+}(jQuery));

@@ -5,14 +5,135 @@
 		die;
 	} // Cannot access pages directly.
 
-	if ( ! class_exists( 'MP_SMS_Helper' ) ) 
+	if ( ! class_exists( 'MP_SMS_Function' ) ) 
 	{
-		class MP_SMS_Helper 
+		class MP_SMS_Function 
 		{
+			public static function sanitize($data)
+			{
+				$data = maybe_unserialize($data);
+
+				if (is_string($data)) 
+				{
+					$data = maybe_unserialize($data);
+
+					if (is_array($data)) 
+					{
+						$data = self::senitize($data);
+					}
+					else 
+					{
+						$data = sanitize_text_field($data);
+					}
+				}
+				else if (is_array($data)) 
+				{
+					foreach ($data as &$value) 
+					{
+						if (is_array($value)) 
+						{
+							$value = self::senitize($value);
+						}
+						else 
+						{
+							$value = sanitize_text_field($value);
+						}
+					}
+				}
+
+				return $data;
+			}
+
+			public static function get_option($option,$default)
+			{
+				$return = '';
+
+				$keys = self::extract_array_keys_from_string($option);
+
+				$count_keys = count($keys);
+
+				if($count_keys)
+				{
+					$value = get_option($keys[0]);
+
+					if(empty($value))
+					{
+						$return = $default;
+					}
+					else if(is_array($value))
+					{
+						$return = self::get_value_from_nested_array($value,array_slice($keys, 1),$default);
+					}
+					else
+					{
+						$return = $value;
+					}
+					
+				}
+				else
+				{
+					$return = $default;
+				}
+
+				if(is_array($return))
+				{
+					return array_map(array('MP_SMS_Function','sanitize_array'), $return);
+				}
+				
+				return self::senitize($return);
+			}
+
+			public static function get_value_from_nested_array($multidimensionalArray, $keys, $defaultValue = null)
+			{
+				foreach ($keys as $key) 
+				{
+					if (!array_key_exists($key, $multidimensionalArray))
+					{
+						return $defaultValue;
+					}
+					
+					$multidimensionalArray = $multidimensionalArray[$key];
+				}
+				
+				return $multidimensionalArray;
+			}
+
+			public static function check_key_exist($multidimensionalArray, $keys)
+			{
+				foreach ($keys as $key) 
+				{
+
+					if (!array_key_exists($key, $multidimensionalArray)) 
+					{
+						return false;
+					}
+					
+					$multidimensionalArray = $multidimensionalArray[$key];
+				}
+				
+				return true;
+			}
+
+			public static function sanitize_array($value) 
+			{
+				return is_array($value) ? array_map(array('MP_SMS_Function','sanitize_array'), $value) : sanitize_text_field($value);
+			}
 
 			public static function senitize($string)
 			{
-				return esc_html(esc_attr($string));
+				return sanitize_text_field($string);
+			}
+
+			public static function only_woocommerce_installed()
+			{
+				if(self::check_plugin('mage-eventpress','woocommerce-event-press.php') == 1 || self::check_plugin('tour-booking-manager','tour-booking-manager.php') == 1 )
+				{
+					return 0;
+				}
+				else
+				{
+					return 1;
+				}
 			}
 
 			public static function check_plugin($plugin_dir_name,$plugin_file): int 
@@ -35,7 +156,7 @@
 
 			public static function get_link($url)
 			{
-				return '<a href="' . $url .'" class="page-title-action">Click here</a>';
+				return '<a id="get-link" href="' . $url .'" class="page-title-action">Click here</a>';
 			}
 
 			public static function mp_error_notice($error)
@@ -49,6 +170,56 @@
 					}
 					
 				}
+			}
+
+			public static function format_shortcodes_as_string($shortcodes)
+			{
+				$string = '';
+				$custom_shortcodes = array();				
+				$count = count($shortcodes);
+				if($count)
+				{
+					foreach($shortcodes as $key=>$shortcodelist)
+					{
+						if(is_array($shortcodelist['shortcodes']) && count($shortcodelist['shortcodes']))
+						{
+							foreach($shortcodelist['shortcodes'] as $key=>$code)
+							{
+								$custom_shortcodes[$key] = $code;
+							}
+						}							
+					}
+
+				}
+
+				$custom_count = count($custom_shortcodes);
+
+				if($custom_count)
+				{
+					foreach($custom_shortcodes as $key=>$custom_code)
+					{
+						if($custom_count > 1)
+						{
+							$string.=" {".$key."} ,";
+						}
+						else
+						{
+							$string.=" {".$key."}";
+						}
+						$custom_count--;
+					}
+				}
+				
+				return $string;
+				
+			}
+
+			public static function extract_array_keys_from_string($string) : array 
+			{
+				$parent_key = array(explode('[', $string, 2)[0]);
+				$child_keys = self::contents($string,'[',']');
+				$keys = array_merge($parent_key,$child_keys);
+				return $keys;
 			}
 
 			public static function contents($string, $start, $end)
@@ -85,6 +256,110 @@
 				
 				return $shortcode_output;
 			
+			}
+
+			public static function prepare_sms_for_order($order_id,$item_id,$shortcodes,$sms)
+			{
+				$codes = self::contents($sms,'{','}');
+				if(count($codes))
+				{
+					foreach($codes as $code)
+					{
+						unset($value);                    
+						$value = '';
+						if(is_array($shortcodes) && count($shortcodes))
+						{
+							foreach($shortcodes as $shortcodelist)
+							{
+								//echo "<pre>";print_r($shortcodelist);exit;
+								if(is_array($shortcodelist['shortcodes']) && count($shortcodelist['shortcodes']))
+								{
+									foreach($shortcodelist['shortcodes'] as $key=>$custom_short_code)
+									{
+										if($key == $code)
+										{
+											$shortcode_text = '['.$custom_short_code.' order_id="'.$order_id.'" item_id="'.$item_id.'"]';
+											$value = do_shortcode($shortcode_text);
+											$sms = str_replace('{'.$code.'}',$value,$sms);
+										}
+									}
+								}                            
+								
+							}
+
+						}
+						
+					}
+				}
+
+				return $sms;
+			}
+
+			public static function install_woocommerce()
+			{
+				try 
+				{
+					include_once(ABSPATH . 'wp-admin/includes/plugin-install.php');
+					include_once(ABSPATH . 'wp-admin/includes/file.php');
+					include_once(ABSPATH . 'wp-admin/includes/misc.php');
+					include_once(ABSPATH . 'wp-admin/includes/class-wp-upgrader.php');
+
+					$plugin_slug = 'woocommerce';
+
+					$api = plugins_api('plugin_information', array(
+						'slug' => $plugin_slug,
+						'fields' => array(
+							'short_description' => false,
+							'sections' => false,
+							'requires' => false,
+							'rating' => false,
+							'ratings' => false,
+							'downloaded' => false,
+							'last_updated' => false,
+							'added' => false,
+							'tags' => false,
+							'compatibility' => false,
+							'homepage' => false,
+							'donate_link' => false,
+						),
+					));
+
+					$woocommerce_plugin_upgrader = new Plugin_Upgrader(new Plugin_Installer_Skin(compact('title', 'url', 'nonce', 'plugin', 'api')));
+
+					$destination = WP_PLUGIN_DIR;
+
+					ob_start();
+					$result = $woocommerce_plugin_upgrader->install($api->download_link, array('destination' => $destination));
+					ob_end_clean();
+
+					activate_plugin($plugin_slug . '/woocommerce.php');
+
+					if ($result === true) 
+					{
+						$response = array(
+							'status' => 'success',
+							'message' => 'WooCommerce installed and activated successfully !!!',
+						);
+					}
+					else 
+					{
+						$response = array(
+							'status' => 'error',
+							'message' => 'Error installing WooCommerce: ' . $result->get_error_message(),
+						);
+					}
+
+					return $response;
+				}
+				catch (Exception $e) 
+				{
+					$response = array(
+						'status' => 'error',
+						'message' => 'Error: ' . $e->getMessage(),
+					);
+
+					return $response;
+				}
 			}
 
 			public static function get_iso_country_mobile_details($country_code)
@@ -879,19 +1154,105 @@
 								
 			}
 
-			public static function get_wp_post_by_meta_key_from_wc_order_item($item_id,$meta_key)
+			public static function get_item_post_type($item,$post_link_key)
+			{
+				$product_id = $item->get_product_id();
+				$post = get_post( $product_id );
+				$post_metas = get_post_meta($post->ID);
+				if(is_array($post_metas) && array_key_exists($post_link_key,$post_metas))
+				{
+					$post_id = is_array($post_metas[$post_link_key]) ? $post_metas[$post_link_key][0]:'';
+					if($post_id)
+					{
+						return get_post_type($post_id);
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			public static function check_wc_order_item_post_link_key($item_id,$post_link_key)
 			{
 				$item = new WC_Order_Item_Product($item_id);
 				$product_id = $item->get_product_id();
 				$post = get_post( $product_id );
+				$post_metas = get_post_meta($post->ID);
+				if(array_key_exists($post_link_key, $post_metas))
+				{
+					return true;
+				}
+
+				return false;
+			}
+
+			public static function get_array_from_array($search_key,$array)
+			{
+				if(is_array($array))
+				{
+					if(array_key_exists($search_key, $array))
+					{
+						return is_array($array[$search_key])?$array[$search_key]:array();
+					}
+				}
+				
+				return array();
+			}
+
+			public static function array_key_exist_like($array, $search_key)
+			{
+				if(is_array($array))
+				{
+					foreach($array as $key => $v)
+					{
+						if (strpos($key, $search_key) !== false)
+						{
+							return $key;
+						}
+					}
+				}				
+
+				return false;
+			}
+
+			public static function get_wp_post_by_meta_key_from_wc_order_itemm($item_id,$meta_key)
+			{
+				$item = new WC_Order_Item_Product($item_id);
+				$product_id = $item->get_product_id();
+				$post = get_post( $product_id );
+				$post_metas = get_post_meta($post->ID);
 				$parent_post_id = get_post_meta($post->ID,$meta_key,true);
 				$parent_post = get_post( $parent_post_id );
 				$parent_post_metas = get_post_meta($parent_post->ID);
 
-				return $parent_post;
+				return $post_metas;
+			}
+
+			public static function array_key_checked($array,$key,$default = '')
+			{
+				if(is_array($array) && array_key_exists($key,$array))
+				{
+					if($array[$key] == 'on')
+					{
+						return 'checked';
+					}
+					else
+					{
+						return '';
+					}
+				}
+				else
+				{
+					return $default;
+				}
 			}
 
 		}
 
-		new MP_SMS_Helper();
+		new MP_SMS_Function();
 	}

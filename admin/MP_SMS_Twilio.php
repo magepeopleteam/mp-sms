@@ -7,6 +7,8 @@ if (!defined('ABSPATH'))
 require __DIR__ . '/../thirdparty/sms/twilio/vendor/autoload.php';
 
 use Twilio\Rest\Client as TwilioClient;
+use Twilio\Exceptions\ConfigurationException;
+use Twilio\Exceptions\TwilioException;
 
 /**
  * Class for working with the Twilio SMS Service
@@ -19,89 +21,97 @@ if (!class_exists('MP_SMS_TWILIO'))
     
     class MP_SMS_TWILIO 
     {
-        private $available;
-        private $enabled;
-        private $sms_feature;
-        private $sms_provider;
-        private $client;
-        private $account_id;
-        private $auth_token;
-        private $twilio_number;
         private $error;
 
         public function __construct()
-        {            
-            add_action('mp_sms_tab', array($this, 'tab_item'));
-            add_action('mp_sms_tab_content', array($this, 'twilio'));
-            add_action('admin_init', [ $this, 'save_mp_sms_twilio_settings' ]);
-            add_action('wp_loaded', array( $this, 'apply' ) );
-            add_action('mp_send_sms', [ $this, 'send_sms' ]);
-            add_action('admin_notices', array( $this, 'mp_admin_notice' ) );          
+        {
+            $this->error = new WP_Error();
+            if(class_exists(TwilioClient::class))
+            {            
+                add_action('mp_sms_tab', array($this, 'tab_item'));
+                add_action('mp_sms_tab_content', array($this, 'twilio'));
+                add_action('admin_init', [ $this, 'save_mp_sms_twilio_settings' ]);
+                add_action('admin_notices', array( $this, 'mp_admin_notice' ) );
+                add_action('mp_sms_twilio_settings', array($this,'mp_sms_twilio_settings'));
+                $this->error_detect();
+                if(!$this->error->has_errors())
+                {
+                    add_action('mp_send_sms', [ $this, 'send_sms' ]);
+                }
+            }          
         }
 
         public function tab_item()
         {
-            if($this->available == 'yes')
-            {
+            
             ?>
-                <li class="tab-item" data-tabs-target="#mp_sms_twilio_settings">Twilio Settings</li>
+                <!-- <li class="tab-item" data-tabs-target="#mp_sms_twilio_settings"><?php //esc_html_e('Twilio Settings','mp-sms'); ?></li> -->
             <?php
-            }
+        }
+
+        public function mp_sms_twilio_settings()
+        {
+            $mp_sms_twilio_settings = MP_SMS_Function::get_option('mp_sms_twilio_settings','');
+
+            ?>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <label for="mp_sms_twilio_settings[use_feature]"><strong><?php esc_html_e('Activate Twilio ?','mp-sms');?></strong></label>
+                            <?php MP_SMS_Layout::switch_button('mp_sms_twilio_settings[use_feature]' ,'accordion-toggle' , 'mp_sms_twilio_settings[use_feature]',  MP_SMS_Function::array_key_checked($mp_sms_twilio_settings,'use_feature'),''  ); ?>                                        
+                        </div>
+                        <div class="accordion-content">
+
+                            <h4><?php esc_html_e('Twilio Account Settings','mp-sms'); ?></h4>
+                
+                            <table class="wc_gateways widefat striped">                                
+                                <tr>
+                                    <td>
+                                        <label><?php esc_html_e('Account ID','mp-sms'); ?></label>
+                                    </td>
+                                    <td>
+                                        <input class="input-text" type="text" name="mp_sms_twilio_settings[account_id]" value="<?php echo esc_attr( $mp_sms_twilio_settings['account_id']??'' ); ?>" placeholder="<?php esc_html_e( 'Account ID', 'mp-sms' ); ?>"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label><?php esc_html_e('Auth Token','mp-sms'); ?></label>
+                                    </td>
+                                    <td>
+                                        <input class="input-text" type="text" name="mp_sms_twilio_settings[auth_token]" value="<?php echo esc_attr( $mp_sms_twilio_settings['auth_token']??'' ); ?>" placeholder="<?php esc_html_e( 'Auth Token', 'mp-sms' ); ?>"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label><?php esc_html_e('Twilio Number','mp-sms'); ?></label>
+                                    </td>
+                                    <td>
+                                        <input class="input-text" type="text" name="mp_sms_twilio_settings[twilio_number]" value="<?php echo esc_attr( $mp_sms_twilio_settings['twilio_number']??'' ); ?>" placeholder="<?php esc_html_e( 'Twilio Number', 'mp-sms' ); ?>"/>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </div>
+                    </div>
+                </div>
+            <?php
         }
 
         public function twilio() 
         {
-
             ?>
                 <div class="tab-content" id="mp_sms_twilio_settings">
-                    <div class="mpStyle">
-                        <form method="post" action="options.php">
-                            <?php
-                                wp_nonce_field('mp_sms_twilio_settings', 'mp_sms_twilio_settings_nonce');
-                                $account_id = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['account_id']);
-                                $auth_token = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['auth_token']);
-                                $twilio_number = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['twilio_number']);
-                            ?>
-                            <table  class="form-table">
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <label>Account ID</label>
-                                        </td>
-                                        <td>
-                                            <input class="formControl" type="text" name="mp_sms_twilio_settings[account_id]" value="<?php echo esc_attr( $account_id??'' ); ?>" placeholder="<?php esc_html_e( 'Account ID', 'mp-sms' ); ?>"/>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <label>Auth Token</label>
-                                        </td>
-                                        <td>
-                                            <input class="formControl" type="text" name="mp_sms_twilio_settings[auth_token]" value="<?php echo esc_attr( $auth_token??'' ); ?>" placeholder="<?php esc_html_e( 'Auth Token', 'mp-sms' ); ?>"/>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <label>Twilio Number</label>
-                                        </td>
-                                        <td>
-                                            <input class="formControl" type="text" name="mp_sms_twilio_settings[twilio_number]" value="<?php echo esc_attr( $twilio_number??'' ); ?>" placeholder="<?php esc_html_e( 'Twilio Number', 'mp-sms' ); ?>"/>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="2">
-                                            <div style="float:right;padding-left: 10px">
-                                                <input type="hidden" name="action" value="mp_sms_twilio_settings_save">
-                                                <input type="submit" name="submit" class="button-primary" value="Save Settings">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </form>
-					</div>
-                </div>
 
+                    <form method="post" action="options.php">
+                        <?php do_action('mp_sms_twilio_settings'); ?>
+                        <div class="action-button">
+                            <?php echo wp_nonce_field('mp_sms_twilio_settings', 'mp_sms_twilio_settings_nonce'); ?>
+                            <input type="hidden" name="action" value="mp_sms_twilio_settings_save">
+                            <input type="submit" name="submit" class="button" value="Save Settings">
+                        </div>
+                    </form>
+					
+                </div>
             <?php
         }
 
@@ -110,6 +120,15 @@ if (!class_exists('MP_SMS_TWILIO'))
             if (isset($_POST['action']) && $_POST['action'] === 'mp_sms_twilio_settings_save' && wp_verify_nonce($_POST['mp_sms_twilio_settings_nonce'], 'mp_sms_twilio_settings')) 
             {                
                 $sanitized_options = array();
+                if (isset($_POST['mp_sms_twilio_settings']['use_feature'])) 
+                {
+                    $sanitized_options['use_feature'] = sanitize_text_field($_POST['mp_sms_twilio_settings']['use_feature']);
+                }
+                else
+                {
+                    $sanitized_options['use_feature'] = '';
+                }
+                
                 if (isset($_POST['mp_sms_twilio_settings']['account_id'])) 
                 {
                     $sanitized_options['account_id'] = sanitize_text_field($_POST['mp_sms_twilio_settings']['account_id']);
@@ -125,114 +144,87 @@ if (!class_exists('MP_SMS_TWILIO'))
 
                 update_option('mp_sms_twilio_settings', $sanitized_options);
 
-                wp_safe_redirect(admin_url('admin.php?page=mp-sms#mp_sms_twilio_settings'));
+                wp_safe_redirect(admin_url('admin.php?page=mp-sms-settings#mp_sms_twilio_settings'));
                 exit();
                 
             }
 
         }
 
-        public function apply()
-        {
-            $this->error = new WP_Error();
-            $this->available = ( $this->available() == '1' ) ? 'yes' : 'no';
-            $this->sms_feature = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['use_sms_features']);
-            $this->sms_provider = MP_SMS_Helper::senitize(get_option('mp_sms_general_settings')['sms_provider']);
-            $this->enabled = ( $this->check_enabled() == '1' ) ? 'yes' : 'no';
-
-            if($this->available == 'no') 
-            {
-                $this->error->add('invalid_data', esc_html__( 'Oops! Twilio is not installed properly !!! ', 'mp-sms' ));
-            }
-
-            if($this->enabled == 'yes')
-            {                
-                $this->account_id = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['account_id']);
-
-                $this->auth_token = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['auth_token']);
-
-                $this->twilio_number = MP_SMS_Helper::senitize(get_option('mp_sms_twilio_settings')['twilio_number']);
-
-                $admin_url = get_admin_url();
-
-                $sms_setting_url = MP_SMS_Helper::get_link($admin_url.'/admin.php?page=mp-sms#mp_sms_twilio_settings');
-
-                if ( empty( $this->account_id ) )
-                {
-                    $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Account Id is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
-                }
-                
-                if( empty($this->auth_token) )
-                {
-                    $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Auth Token is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
-                }
-
-                if( empty($this->twilio_number) )
-                {
-                    $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Number is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
-                }
-
-                $this->client = new TwilioClient($this->account_id, $this->auth_token);
-                
-            }
-            
-        }
-
-        public static function available()
-        {
-            if(class_exists(TwilioClient::class))
-            {
-                return 1;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
-        public function check_enabled()
-        {
-            if($this->available == 'yes' && $this->sms_feature == "on" && $this->sms_provider == 'twilio')
-            {
-                return 1;
-            }
-            else
-            {
-                return 0;
-            }
-
-        }
-
         public function send_sms($args)
         {
-            if( $this->enabled == 'yes' && !$this->error->has_errors())
+            $twilio_settings = MP_SMS_Function::get_option('mp_sms_twilio_settings','');
+
+            $numbers = is_array($args['numbers'])?$args['numbers']:array($args['numbers']);
+
+            if(count($numbers))
             {
-                $numbers = is_array($args['numbers'])?$args['numbers']:array($args['numbers']);
-                
-                if(count($numbers) && !empty($args['sms']))
+                $this->error->add('invalid_data', esc_html__( 'Oops!  No mobile number is provided for SMS Sending ', 'mp-sms' ));
+            }
+        
+            if(count($numbers) && !empty($args['sms']))
+            {
+                try 
                 {
+                    $client = new TwilioClient($twilio_settings['account_id'], $twilio_settings['auth_token']);
                     foreach ($numbers as $number)
                     {
-                        $this->client->messages->create(
-                            // Where to send a text message (your cell phone?)
+                        $message = $client->messages->create(
                             $number,
                             array(
-                                'from' => $this->twilio_number,
+                                'from' => $twilio_settings['twilio_number'],
                                 'body' => $args['sms']
                             )
                         );
-
                     }
-
+                } 
+                catch (TwilioException $e) 
+                {
+                    
                 }
                 
+            }
+
+        }
+
+        public function error_detect()
+        {
+            $general_settings = MP_SMS_Function::get_option('mp_sms_general_settings','');
+
+            if(is_array($general_settings) && (array_key_exists('use_feature',$general_settings) && $general_settings['use_feature'] == "on"))
+            {
+                $twilio_settings = MP_SMS_Function::get_option('mp_sms_twilio_settings','');
+                
+                if ( array_key_exists('use_feature',$twilio_settings) &&  $twilio_settings['use_feature'] == "on" )
+                {
+                    $admin_url = get_admin_url();
+
+                    $sms_setting_url = MP_SMS_Function::get_link($admin_url.'admin.php?page=mp-sms-settings#mp_sms_general_settings');
+
+                    if( !array_key_exists('account_id',$twilio_settings) || (array_key_exists('account_id',$twilio_settings) && empty( $twilio_settings['account_id'] ) ))
+                    {
+                        $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Account Id is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
+                    }
+                    
+                    if( !array_key_exists('auth_token',$twilio_settings) || (array_key_exists('auth_token',$twilio_settings) && empty( $twilio_settings['auth_token']) ))
+                    {
+                        $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Auth Token is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
+                    }
+
+                    if( !array_key_exists('twilio_number',$twilio_settings) || (array_key_exists('twilio_number',$twilio_settings) && empty( $twilio_settings['twilio_number']) ))
+                    {
+                        $this->error->add('invalid_data', esc_html__( 'Oops!  invalid Twilio Number is provided. To fix it please ', 'mp-sms' ). $sms_setting_url);
+                    }
+                    
+                }
+
             }
 
         }
 
         public function mp_admin_notice()
         {				
-            MP_SMS_Helper::mp_error_notice($this->error);
+            MP_SMS_Function::mp_error_notice($this->error);
         }
         
     }

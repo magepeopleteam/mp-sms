@@ -9,23 +9,36 @@
 	{
 		class MP_SMS_Layout 
 		{
-			public function __construct() 
-			{
-				
-			}
+			public static function switch_button($id='',$class='',$name='',$status='',$data='')
+            {
+                $str_data = '';
+                if(is_array($data) && count($data))
+                {
+                    foreach($data as $key=>$name)
+                    {
+                        $str_data .= 'data-'.$key.'="'.$name.'"';
+                    }
+                }
 
-			public static function switch_button($name, $checked , $label='')
-			{
-				?>
-					<div>
-						<label class="roundSwitchLabel">
-							<input type="checkbox" name="<?php echo $name;?>" <?php echo $checked; ?> />
-							<span class="roundSwitch"></span>
-						</label> <?php echo $label; ?>
-					</div>
+                ?>
+                    <label class="switch">
+                        <input type="checkbox" id="<?php echo esc_attr($id); ?>" class="<?php echo esc_attr($class); ?>" name="<?php echo esc_attr($name); ?>" <?php echo esc_attr($status); ?>  <?php echo $str_data;?> >
+                        <span class="slider"></span>
+                    </label>
+                <?php 
+            }
 
-				<?php
-			}
+            public static function sms_shortcode_info($shortcodes,$message)
+            {
+                ?>
+                <div class="sms-template-info">
+                    <p><b><?php esc_html_e('Available Shortcodes','mp-sms');?></b></p>
+                    <p><?php echo esc_html($shortcodes); ?></p>
+                    <p><b><?php esc_html_e('Example: ','mp-sms');?></b></p>
+                    <p><?php esc_html_e($message,'mp-sms'); ?></p>
+                </div>
+                <?php
+            }
 		}
 
 		new MP_SMS_Layout();
